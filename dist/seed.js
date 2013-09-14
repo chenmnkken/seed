@@ -1,12 +1,12 @@
 /*
-* seed v1.0.0
+* seed v1.1.0
 * AMD module loader
 *
 * Copyright (c) 2013 Yiguo Chan
 * Released under the MIT Licenses
 *
 * Mail : chenmnkken@gmail.com
-* Date : 2013-09-08
+* Date : 2013-09-14
 */
 (function( window, undefined ){
 
@@ -30,13 +30,25 @@ var seed = function(){
         // 模块加载器的配置对象
         moduleOptions = {
             baseUrl : null,
-            charset : {}    // 模块对应的charset存储对象
+            charset : {},    // 模块对应的charset存储对象
+            alias : {}
         };
         
     var easyModule = { 
         
         error : function( msg ){
             throw new Error( msg );
+        },
+        
+        // 用于合并模块加载器配置的工具函数
+        merge : function( key, options ){    
+            if( options ){
+                var name;
+                
+                for( name in options ){
+                    moduleOptions[ key ][ name ] = options[ name ];
+                }
+            }
         },
         
         // 初始化模块加载器时获取baseUrl(既是当前js文件加载的url)
@@ -437,19 +449,22 @@ var seed = function(){
     
         use : function( ids, fn ){
             ids = typeof ids === 'string' ? [ ids ] : ids;
-            var module = seedExports.module,
+            var alias = moduleOptions.alias,
+                module = seedExports.module,
                 len = ids.length,
                 isLoaded = true,
                 namesCache = [],
                 modNames = [],
                 modUrls = [],
                 j = 0,
-                mod, modName, result, useKey, args, name, i;        
+                mod, modName, result, useKey, args, name, i, id;        
                 
             for( i = 0; i < len; i++ ){
+                id = ids[i];
+                
                 // 获取解析后的模块名和url
-                result = easyModule.parseModId( ids[i], moduleOptions.baseUrl );
-                modName = result[0];
+                result = easyModule.parseModId( alias[id] || id, moduleOptions.baseUrl );
+                modName = alias[ id ] ? id : result[0];
                 mod = module[ modName ];            
 
                 if( !mod ){
@@ -521,24 +536,23 @@ var seed = function(){
          * @param { Object }
          */
         config : function( options ){
-            var baseUrl = options.baseUrl,
-                isHttp = baseUrl.slice( 0, 4 ) === 'http',
-                charset = options.charset,
-                name;
+            var baseUrl, isHttp;
+        
+            if( options.baseUrl ){
+                baseUrl = options.baseUrl;
+                isHttp = baseUrl.slice( 0, 4 ) === 'http';
                 
-            if( isHttp ){
-                moduleOptions.baseUrl = baseUrl;
-            }
-            // 相对路径的baseUlr是基于HTML页面所在的路径(无论是http地址还是file地址)
-            else{
-                moduleOptions.baseUrl = easyModule.mergePath( baseUrl, window.location.href );
-            }
-            
-            if( charset ){
-                for( name in charset ){
-                    moduleOptions.charset[ name ] = charset[ name ];
+                if( isHttp ){
+                    moduleOptions.baseUrl = baseUrl;
+                }
+                // 相对路径的baseUlr是基于HTML页面所在的路径(无论是http地址还是file地址)
+                else{
+                    moduleOptions.baseUrl = easyModule.mergePath( baseUrl, window.location.href );
                 }
             }
+            
+            easyModule.merge( 'charset', options.charset );
+            easyModule.merge( 'alias', options.alias );
         }
     
     };   
@@ -567,7 +581,8 @@ var seed = function(){
             deps = null;
         }
 
-        var module = seedExports.module,
+        var alias = moduleOptions.alias,
+            module = seedExports.module,
             mod = module[ name ],
             isRepeat = false,
             isLoaded = true,
@@ -575,7 +590,7 @@ var seed = function(){
             urls = [],
             insertIndex = 0,
             pullIndex = 0,
-            useKey, data, modUrl, factorys, baseUrl, depMod, depName, result, exports, args, depsData, repeatDepsData, i, repeatName;
+            useKey, data, modUrl, factorys, baseUrl, depMod, depName, result, exports, args, depsData, repeatDepsData, i, repeatName, dep;
             
         // 在模块都合并的情况下直接执行factory
         if( !mod ){
@@ -606,9 +621,10 @@ var seed = function(){
 
             // 遍历依赖模块列表，如果该依赖模块没加载过，
             // 则将该依赖模块名和模块路径添加到当前模块加载队列的数据去进行加载
-            for( i = 0; i < deps.length; i++ ){
-                result = easyModule.parseModId( deps[i], baseUrl );
-                depName = result[0];             
+            for( i = 0; i < deps.length; i++ ){              
+                dep = deps[i];             
+                result = easyModule.parseModId( alias[dep] || dep, baseUrl );
+                depName = alias[ dep ] ? dep : result[0];             
                 depMod = module[ depName ];
                 mod.deps.push( depName );            
                 depsData[ depName ] = true;
