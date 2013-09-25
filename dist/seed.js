@@ -6,7 +6,7 @@
 * Released under the MIT Licenses
 *
 * Mail : chenmnkken@gmail.com
-* Date : 2013-09-14
+* Date : 2013-09-25
 */
 (function( window, undefined ){
 
@@ -444,6 +444,8 @@ var seed = function(){
     };        
     
     var seedExports = {
+    
+        version : '1.1.0',
         
         module : {},
     
