@@ -1,19 +1,19 @@
 /*
-* seed v1.1.0
+* seed v1.1.1
 * AMD module loader
 *
 * Copyright (c) 2013 Yiguo Chan
 * Released under the MIT Licenses
 *
 * Mail : chenmnkken@gmail.com
-* Date : 2013-09-25
+* Date : 2013-10-23
 */
 (function( window, undefined ){
 
 'use strict';
 
 var seed = function(){
-    var rProtocol = /^(http(?:s)?\:\/\/|file\:.+\:\/)/,
+    var rProtocol = /^(file\:.+\:\/|[\w\-]+\:\/\/)/,
         rModId = /([^\/?]+?)(\.(?:js|css))?(\?.*)?$/, 
         rReadyState = /loaded|complete|undefined/,  
         
