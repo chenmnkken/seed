@@ -1,13 +1,13 @@
 /*
-* seed v1.1.2
+* seed v1.1.3
 * AMD module loader
 *
-* Copyright (c) 2013 Yiguo Chan
+* Copyright (c) 2013-2014 Yiguo Chan
 * Released under the MIT Licenses
 *
 * Gighub : https://github.com/chenmnkken/seed.git
 * Mail : chenmnkken@gmail.com
-* Date : 2013-11-21
+* Date : 2014-07-26
 */
 (function( window, undefined ){
 
@@ -314,50 +314,54 @@ var seed = function(){
         /*
          * 模块加载完触发的回调函数
          * @param{ Object } 模块对象
-         * @param{ Boolean } 是否为CSS模块
          */
         complete : function( mod ){
             var module = seedExports.module,
                 useKey = mod.useKey,
-                data = moduleCache[ useKey ],
-                i = 0,
-                j = 0,
-                namesCache, args, len, cacheMod, name;  
-                
-            delete mod.useKey;    
-                
-            if( !data ){
-                return;
-            }
+                keyLen = useKey.length,
+                k = 0,
+                namesCache, args, cacheLen, cacheMod, name, data, key, i, j;
 
-            // 队列没加载完将继续加载
-            if( data.urls.length ){
-                easyModule.load( useKey );
-            }
-            else if( !data.length ){
-                namesCache = data.namesCache;                        
-                len = namesCache.length;
-                args = [];
-                
-                // 合并模块的exports为arguments
-                for( ; i < len; i++ ){  
-                    name = namesCache[i];
-                    cacheMod = module[ name ];
+            for( ; k < useKey.length; k++ ){
+                key = useKey[k];
+                data = moduleCache[ key ];
+                useKey.splice( k--, 1 );
+
+                if( !data ){
+                    continue;
+                }
+
+                // 队列没加载完将继续加载
+                if( data.urls.length ){
+                    easyModule.load( key );
+                }
+                else if( !data.length ){
+                    namesCache = data.namesCache;                        
+                    cacheLen = namesCache.length;
+                    args = [];
+                    i = 0;
+                    j = 0;
                     
-                    if( cacheMod.status !== 4 ){
-                        easyModule.error( '[' + name + '] module failed to use.' );
+                    // 合并模块的exports为arguments
+                    for( ; i < cacheLen; i++ ){  
+                        name = namesCache[i];
+                        cacheMod = module[ name ];
+                        
+                        if( cacheMod.status !== 4 ){
+                            easyModule.error( '[' + name + '] module failed to use.' );
+                        }
+                        args[ j++ ] = cacheMod.exports;
                     }
-                    args[ j++ ] = cacheMod.exports;
-                }
-                
-                // 执行use的回调
-                if( data.callback ){
-                    data.callback.apply( null, args );
-                }
-                
-                // 删除队列数据
-                delete moduleCache[ useKey ];            
-            }        
+                    
+                    // 执行use的回调
+                    if( data.callback ){
+                        data.callback.apply( null, args );
+                    }
+
+                    // 删除队列数据
+                    delete moduleCache[ key ];            
+                }        
+            }
         },
         
         /*
@@ -372,7 +376,6 @@ var seed = function(){
                 mod = seedExports.module[ name ],
                 script, link;
                 
-            mod.useKey = useKey;
             mod.status = 1;
             
             // CSS模块的处理
@@ -435,15 +438,29 @@ var seed = function(){
          */ 
         load : function( useKey ){            
             var data = moduleCache[ useKey ],
+                module = seedExports.module,
                 names = data.names.shift(),
                 urls = data.urls.shift(),            
                 len = urls.length,
                 i = 0,
-                script;       
+                mod, script;     
 
             for( ; i < len; i++ ){
-                script = easyModule.create( urls[i], names[i], useKey );
-                head.insertBefore( script, head.firstChild );
+                mod = module[ names[i] ];
+
+                if( mod.useKey === undefined ){
+                    mod.useKey = [];
+                }
+
+                mod.useKey.push( useKey );
+
+                if( module[names[i]].status === undefined ){
+                    script = easyModule.create( urls[i], names[i], useKey );
+                    head.insertBefore( script, head.firstChild );
+                }
+                else{
+                    data.length--;
+                }
             }
         }   
     };        
@@ -478,7 +495,7 @@ var seed = function(){
                     mod = module[ modName ] = {};
                     isLoaded = false;
                 }
-                
+
                 // 将模块名和模块路径添加到队列中
                 modNames[ modNames.length++ ] = modName;
                 modUrls[ modUrls.length++ ] = mod.url = result[1];
@@ -571,8 +588,7 @@ var seed = function(){
       * @param { Function } 模块的内容
       * factory的参数对应依赖模块的外部接口(exports)
       */
-    window.define = function( name, deps, factory ){      
-        
+    window.define = function( name, deps, factory ){              
         if( typeof name !== 'string' ){
             if( typeof name === 'function' ){
                 factory = name;
@@ -611,7 +627,7 @@ var seed = function(){
             return;
         }
         
-        useKey = mod.useKey;
+        useKey = mod.useKey[0];
         data = moduleCache[ useKey ];
         modUrl = mod.url;
 
