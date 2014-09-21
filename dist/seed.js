@@ -1,5 +1,5 @@
 /*
-* seed v1.1.3
+* seed v1.1.4
 * AMD module loader
 *
 * Copyright (c) 2013-2014 Yiguo Chan
@@ -7,7 +7,7 @@
 *
 * Gighub : https://github.com/chenmnkken/seed.git
 * Mail : chenmnkken@gmail.com
-* Date : 2014-07-26
+* Date : 2014-09-21
 */
 (function( window, undefined ){
 
@@ -348,7 +348,7 @@ var seed = function(){
                         cacheMod = module[ name ];
                         
                         if( cacheMod.status !== 4 ){
-                            easyModule.error( '[' + name + '] module failed to use.' );
+                            return;
                         }
                         args[ j++ ] = cacheMod.exports;
                     }
@@ -476,12 +476,12 @@ var seed = function(){
             var alias = moduleOptions.alias,
                 module = seedExports.module,
                 len = ids.length,
-                isLoaded = true,
+                isLoaded = false,
                 namesCache = [],
                 modNames = [],
                 modUrls = [],
                 j = 0,
-                mod, modName, result, useKey, args, name, i, id;        
+                mod, modName, result, useKey, args, name, i, id;     
                 
             for( i = 0; i < len; i++ ){
                 id = ids[i];
@@ -489,11 +489,14 @@ var seed = function(){
                 // 获取解析后的模块名和url
                 result = easyModule.parseModId( alias[id] || id, moduleOptions.baseUrl );
                 modName = alias[ id ] ? id : result[0];
-                mod = module[ modName ];            
+                mod = module[ modName ];    
 
                 if( !mod ){
                     mod = module[ modName ] = {};
                     isLoaded = false;
+                }
+                else if( mod.status === 4 ){
+                    isLoaded = true;
                 }
 
                 // 将模块名和模块路径添加到队列中
@@ -507,7 +510,7 @@ var seed = function(){
             namesCache = namesCache.concat( modNames );
             
             // 在模块都合并的情况下直接执行callback
-            if( isLoaded ){                    
+            if( isLoaded ){
                 len = namesCache.length;
                 args = [];
                 
